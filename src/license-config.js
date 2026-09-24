@@ -15,11 +15,12 @@ export const LICENSE = {
   mode: 'offline',
 
   // Public key for offline verification (from license-keygen.mjs).
+  // Production key — the matching private key lives only in your keys.json.
   PUBLIC_JWK: {
     kty: 'EC',
     crv: 'P-256',
-    x: 'rJEmRa_-k0kjsyll6gkv54kI6YWcgYieIgJBcB1MuZI',
-    y: 'o8T-LbnO1_hlb8T8cTkUoKTRpVoAvolrnJ-K5NcgdJk'
+    x: 'VJP8mBNYkouZJkmJxs5bG1Fr7E_xrdevJUNvLVmdjug',
+    y: 'wZa4RKhi80R8alk2O6if7Eku0kmcaTNGyRmJ62ZnnAQ'
   },
 
   // For mode: 'gumroad' — your Gumroad product's ID (Product → Advanced).
