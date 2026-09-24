@@ -49,11 +49,15 @@ function vendorImportmap() {
   </script>`;
 }
 
-function renderTemplate(tpl, cfg, importmap) {
+const BADGE_HTML =
+  '<a class="lumen-badge" href="https://github.com/zackarman28346-sketch/https-github.com-zackarman28346-sketch-claude" target="_blank" rel="noopener">built with Lumen3D</a>';
+
+function renderTemplate(tpl, cfg, importmap, pro) {
   return tpl
     .replaceAll('{{TITLE}}', escapeHtml(cfg.title))
     .replaceAll('{{DESCRIPTION}}', escapeHtml(cfg.description))
-    .replaceAll('{{IMPORTMAP}}', importmap);
+    .replaceAll('{{IMPORTMAP}}', importmap)
+    .replaceAll('{{BADGE}}', pro ? '' : BADGE_HTML);
 }
 
 // Locate an installed `three` package, checking the user's project first,
@@ -113,7 +117,7 @@ async function writeSite(cfg, outDir, options = {}) {
   await fs.mkdir(outDir, { recursive: true });
 
   const importmap = options.vendor ? vendorImportmap() : cdnImportmap(cfg.threeVersion);
-  const html = renderTemplate(tpl, cfg, importmap);
+  const html = renderTemplate(tpl, cfg, importmap, !!options.pro);
   const files = [
     ['index.html', html],
     ['engine.js', engine],
@@ -126,7 +130,7 @@ async function writeSite(cfg, outDir, options = {}) {
 
   if (options.vendor) await vendorThree(outDir);
 
-  return { outDir, files: files.map((f) => f[0]), cfg, vendored: !!options.vendor };
+  return { outDir, files: files.map((f) => f[0]), cfg, vendored: !!options.vendor, pro: !!options.pro };
 }
 
 // Build from a config file on disk. Returns { outDir, files: [...] }.
@@ -148,7 +152,7 @@ export async function buildFromObject(rawConfig, outDir, options = {}) {
 export async function buildInMemory(configPath) {
   const cfg = await loadConfig(configPath);
   const [tpl, engine] = await Promise.all([readTemplate(), readEngine()]);
-  const html = renderTemplate(tpl, cfg, cdnImportmap(cfg.threeVersion));
+  const html = renderTemplate(tpl, cfg, cdnImportmap(cfg.threeVersion), false);
   return {
     cfg,
     assets: {

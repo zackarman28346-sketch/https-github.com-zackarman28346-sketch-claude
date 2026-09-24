@@ -5,6 +5,8 @@
 import { generateConfig, explain } from '../../src/generate.js';
 import { normalizeConfig } from '../../src/schema.js';
 import { mount } from '../../src/runtime/engine.js';
+import { LICENSE } from '../../src/license-config.js';
+import { PREMIUM_TEMPLATES } from './premium.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -20,7 +22,13 @@ const els = {
   randomize: $('#randomize'),
   toast: $('#toast'),
   examples: $('#examples'),
+  premium: $('#premium'),
   preview: $('#preview'),
+  proPill: $('#pro-pill'),
+  upgrade: $('#upgrade'),
+  licenseKey: $('#license-key'),
+  activate: $('#activate'),
+  deactivate: $('#deactivate'),
   // quick controls
   cAccent: $('#c-accent'),
   cTop: $('#c-top'),
@@ -56,6 +64,7 @@ const EXAMPLES = [
 
 let rawConfig = null;      // source of truth (raw, pre-normalize)
 let handle = null;         // live scene handle with dispose()
+let isProUser = false;     // reflects the stored license
 
 function toast(msg, kind = 'ok', link = null) {
   els.toast.hidden = false;
@@ -192,8 +201,9 @@ async function doExport() {
     if (res.canceled) { toast('Export canceled.', 'ok'); }
     else if (res.error) { toast('Export failed: ' + res.error, 'err'); }
     else {
+      const badge = res.pro ? 'no watermark' : 'with “built with Lumen3D” badge';
       toast(
-        `Exported ${res.files.length} files${res.vendored ? ' (self-contained)' : ''}. `,
+        `Exported ${res.files.length} files${res.vendored ? ', self-contained' : ''}, ${badge}. `,
         'ok',
         res.outDir
       );
@@ -228,7 +238,69 @@ async function savePng() {
   }
 }
 
+// ---- Pro / licensing ----
+function setProUI(pro, email) {
+  isProUser = pro;
+  els.proPill.textContent = pro ? 'PRO' : 'FREE';
+  els.proPill.className = 'pro-pill ' + (pro ? 'pro' : 'free');
+  els.upgrade.style.display = pro ? 'none' : '';
+  els.deactivate.style.display = pro ? '' : 'none';
+  if (pro && email) els.proPill.title = email;
+  // premium chips lock/unlock
+  els.premium.querySelectorAll('.chip').forEach((c) => c.classList.toggle('locked', !pro));
+}
+
+async function refreshLicense() {
+  try {
+    const s = await window.lumen.licenseStatus();
+    setProUI(!!s.pro, s.email);
+  } catch {
+    setProUI(false);
+  }
+}
+
+async function activateLicense() {
+  const key = els.licenseKey.value.trim();
+  if (!key) { toast('Paste a license key first.', 'err'); return; }
+  const s = await window.lumen.licenseActivate(key);
+  if (s.pro) {
+    setProUI(true, s.email);
+    toast('Pro unlocked — thank you! Watermark removed + premium templates unlocked.', 'ok');
+    els.licenseKey.value = '';
+  } else {
+    toast('That key is not valid (' + (s.reason || 'invalid') + ').', 'err');
+  }
+}
+
+async function deactivateLicense() {
+  await window.lumen.licenseClear();
+  setProUI(false);
+  toast('License removed from this machine.', 'ok');
+}
+
+function loadPremium(tpl) {
+  if (!isProUser) {
+    toast('“' + tpl.name + '” is a Pro template. Upgrade to unlock the premium gallery.', 'err');
+    return;
+  }
+  rawConfig = JSON.parse(JSON.stringify(tpl.config));
+  els.json.value = JSON.stringify(rawConfig, null, 2);
+  els.understood.hidden = false;
+  els.understood.innerHTML = `<b>Premium template:</b> <span class="tag">${tpl.name}</span>`;
+  syncControls();
+  render(rawConfig).catch((e) => toast('Preview error: ' + e.message, 'err'));
+}
+
 // ---- wire up ----
+PREMIUM_TEMPLATES.forEach((tpl) => {
+  const chip = document.createElement('button');
+  chip.className = 'chip premium locked';
+  chip.textContent = '✦ ' + tpl.name;
+  chip.title = tpl.name + ' (Pro)';
+  chip.addEventListener('click', () => loadPremium(tpl));
+  els.premium.appendChild(chip);
+});
+
 EXAMPLES.forEach((ex) => {
   const chip = document.createElement('button');
   chip.className = 'chip';
@@ -243,6 +315,9 @@ els.applyJson.addEventListener('click', applyJson);
 els.export.addEventListener('click', doExport);
 els.randomize.addEventListener('click', randomize);
 els.savePng.addEventListener('click', savePng);
+els.activate.addEventListener('click', activateLicense);
+els.deactivate.addEventListener('click', deactivateLicense);
+els.upgrade.addEventListener('click', () => window.lumen.openExternal(LICENSE.purchaseUrl));
 
 [els.cAccent, els.cTop, els.cBottom, els.cBloomStr, els.cSpin].forEach((el) =>
   el.addEventListener('input', applyControls));
@@ -261,6 +336,7 @@ document.addEventListener('click', (e) => {
   if (ext) { e.preventDefault(); window.lumen.openExternal(ext); }
 });
 
-// First scene on launch.
+// First scene on launch + license check.
+refreshLicense();
 els.prompt.value = EXAMPLES[0];
 doGenerate();

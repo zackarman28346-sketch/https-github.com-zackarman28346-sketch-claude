@@ -37,6 +37,7 @@
     "bin",
     "src",
     "app",
+    "tools",
     "examples",
     "README.md",
     "LICENSE"

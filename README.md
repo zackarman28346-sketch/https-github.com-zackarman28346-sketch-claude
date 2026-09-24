@@ -72,6 +72,55 @@ Windows machine.
 
 ---
 
+## 💸 Selling Pro licenses
+
+Lumen3D ships a complete freemium system so you can charge for a Pro tier. Free
+users get the full builder; **Pro removes the "built with Lumen3D" watermark
+from exported sites and unlocks the premium template gallery.** Licenses are
+verified **offline** with public-key crypto (ECDSA P-256) — no server to run.
+
+### 1. Create your signing keys (once)
+
+```bash
+node tools/license-keygen.mjs > keys.json    # keep keys.json SECRET (gitignored)
+```
+
+Copy the `public` object from `keys.json` into `src/license-config.js`
+(`PUBLIC_JWK`). This ties valid licenses to *your* private key. (A demo key
+ships by default — replace it before selling.)
+
+### 2. Sell, then mint a key per buyer
+
+```bash
+node tools/license-sign.mjs --keys keys.json --email buyer@example.com
+# → prints the license key to send to the buyer
+#   optional: --tier studio   --days 365 (perpetual if omitted)
+```
+
+The buyer pastes the key into **Lumen3D Studio → "Have a license key?" →
+Activate**, or exports from the CLI with `lumen build --license <key>`.
+
+### 3. Hands-off sales via Gumroad / Lemon Squeezy
+
+For fully automated sales (buyer pays → gets key → activates, no manual step):
+
+1. Create a product on [Gumroad](https://gumroad.com) and enable **license
+   keys** for it.
+2. In `src/license-config.js` set `mode: 'gumroad'` and paste your
+   `gumroadProductId`, and set `purchaseUrl` to your product page.
+3. The app now verifies the buyer's Gumroad key against Gumroad's API on
+   activation. The **✦ Upgrade to Pro** button sends people to `purchaseUrl`.
+
+> Pricing ideas: a one-time **$19–39 Pro** license (watermark removal +
+> premium templates) converts well for a creative tool; add a **template pack**
+> or **commercial-use** tier later.
+
+**Note on open source:** the code is MIT, so the honest business is selling
+convenience and polish (signed builds, premium templates, support), not gating
+the source. The watermark + premium gallery are the value people pay for.
+
+---
+
 ## Why
 
 Spinning up a 3D website usually means wiring a bundler, learning the Three.js
@@ -389,9 +438,13 @@ src/builder.js        config → static site (+ optional vendoring)
 src/server.js         zero-dep dev server
 src/templates/        HTML shell
 src/runtime/engine.js browser-side Three.js engine (mount / boot)
-app/main.js           Electron main process (window + export)
+src/license.js        offline license verification (ECDSA P-256)
+src/license-config.js public key + storefront settings (ships in app)
+tools/license-*.mjs   seller key tools (keygen + sign)
+app/main.js           Electron main process (window + export + license)
 app/preload.cjs       context-isolated IPC bridge
-app/renderer/         Studio UI (prompt box, preview, JSON editor)
+app/renderer/         Studio UI (prompt, preview, JSON editor, Pro)
+app/renderer/premium.js  premium template gallery (Pro-gated)
 .github/workflows/    CI that builds the desktop installers
 examples/             sample configs
 ```

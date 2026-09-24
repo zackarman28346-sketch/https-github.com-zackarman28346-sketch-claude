@@ -9,6 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from '../src/builder.js';
 import { serve } from '../src/server.js';
+import { verifyLicense, isPro } from '../src/license.js';
+import { verifierConfig } from '../src/license-config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -54,6 +56,7 @@ ${c('bold', 'Options')}
   ${c('dim', '--config <file>')}   path to a config JSON (default: lumen.config.json)
   ${c('dim', '--out <dir>')}       output directory for build (default: dist)
   ${c('dim', '--vendor')}          bundle three.js locally (needs: npm install three)
+  ${c('dim', '--license <key>')}   Pro license key — removes the watermark badge
   ${c('dim', '--port <n>')}        dev server port (default: 5173)
 
 ${c('bold', 'Examples')}
@@ -101,15 +104,25 @@ async function cmdBuild(flags) {
   }
 
   const vendor = !!flags.vendor;
+
+  // Pro: a valid license removes the "built with Lumen3D" badge.
+  let pro = false;
+  if (flags.license) {
+    const res = await verifyLicense(String(flags.license), verifierConfig());
+    pro = isPro(res);
+    if (pro) console.log(c('green', `  ✓ Pro license valid${res.email ? ` (${res.email})` : ''} — badge removed`));
+    else console.log(c('yellow', `  ! license not valid (${res.reason}) — building free version`));
+  }
+
   const start = Date.now();
-  const { files, cfg } = await build(configPath, outDir, { vendor });
+  const { files, cfg } = await build(configPath, outDir, { vendor, pro });
   const ms = Date.now() - start;
 
   console.log(c('green', `\n  ✓ built "${cfg.title}" in ${ms}ms`));
   console.log(c('dim', `    ${path.relative(process.cwd(), outDir)}/`));
   for (const f of files) console.log(c('dim', `      ${f}`));
   if (vendor) console.log(c('dim', '      vendor/  (bundled three.js — self-contained)'));
-  console.log(c('dim', `\n    ${cfg.objects.length} object(s), ${cfg.lights.length} light(s)`));
+  console.log(c('dim', `\n    ${cfg.objects.length} object(s), ${cfg.lights.length} light(s)${pro ? ' · Pro (no badge)' : ''}`));
   console.log(c('dim', vendor
     ? '    fully self-contained — deploy the folder anywhere, works offline'
     : '    loads three.js from CDN — deploy to any static host, or use --vendor to bundle it'));

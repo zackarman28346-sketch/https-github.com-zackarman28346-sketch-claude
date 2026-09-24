@@ -27,11 +27,29 @@
         </div>
       </header>
 
+      <div id="pro-bar" class="pro-bar">
+        <span id="pro-pill" class="pro-pill free">FREE</span>
+        <button id="upgrade" class="btn btn-pro btn-sm">✦ Upgrade to Pro</button>
+      </div>
+      <details id="license-wrap" class="license">
+        <summary>Have a license key?</summary>
+        <div class="license-row">
+          <input type="text" id="license-key" placeholder="paste your Pro key…" spellcheck="false" />
+          <button id="activate" class="btn btn-ghost btn-sm">Activate</button>
+        </div>
+        <div class="license-row"><button id="deactivate" class="btn btn-ghost btn-sm">Remove license</button></div>
+      </details>
+
       <label class="field-label" for="prompt">Describe what you want</label>
       <textarea id="prompt" rows="3"
         placeholder="e.g. a glowing purple crystal floating in space"></textarea>
 
       <div class="chips" id="examples"></div>
+
+      <div class="row-between" style="margin-top:2px">
+        <span class="field-label">Premium templates ✦</span>
+      </div>
+      <div class="chips" id="premium"></div>
 
       <div class="btn-row">
         <button id="generate" class="btn btn-primary">Generate scene</button>
