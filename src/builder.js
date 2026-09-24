@@ -106,11 +106,8 @@ function escapeHtml(s) {
   }[ch]));
 }
 
-// Build to a directory. Returns { outDir, files: [...] }.
-// options: { vendor: boolean } — when true, bundle three.js into ./vendor
-// so the site is fully self-contained (no CDN needed at view time).
-export async function build(configPath, outDir, options = {}) {
-  const cfg = await loadConfig(configPath);
+// Core: write a normalized config out as a static site.
+async function writeSite(cfg, outDir, options = {}) {
   const [tpl, engine] = await Promise.all([readTemplate(), readEngine()]);
 
   await fs.mkdir(outDir, { recursive: true });
@@ -130,6 +127,20 @@ export async function build(configPath, outDir, options = {}) {
   if (options.vendor) await vendorThree(outDir);
 
   return { outDir, files: files.map((f) => f[0]), cfg, vendored: !!options.vendor };
+}
+
+// Build from a config file on disk. Returns { outDir, files: [...] }.
+// options: { vendor: boolean } — when true, bundle three.js into ./vendor
+// so the site is fully self-contained (no CDN needed at view time).
+export async function build(configPath, outDir, options = {}) {
+  const cfg = await loadConfig(configPath);
+  return writeSite(cfg, outDir, options);
+}
+
+// Build from an in-memory config object (raw or already normalized).
+// Used by the desktop app, which holds the config in memory.
+export async function buildFromObject(rawConfig, outDir, options = {}) {
+  return writeSite(normalizeConfig(rawConfig), outDir, options);
 }
 
 // In-memory build for the dev server (no disk writes). Always uses the CDN

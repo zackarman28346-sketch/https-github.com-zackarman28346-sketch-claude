@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumen3D Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d1a'/%3E%3Cpath d='M16 5l10 6v10l-10 6-10-6V11z' fill='none' stroke='%238a7dff' stroke-width='2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%234de1c1'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./app.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../../node_modules/three/build/three.module.js",
+      "three/addons/": "../../node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="studio">
+    <!-- Left: controls -->
+    <aside id="panel">
+      <header class="brand">
+        <span class="logo">✦</span>
+        <div>
+          <h1>Lumen3D <span>Studio</span></h1>
+          <p>describe it — get a 3D website</p>
+        </div>
+      </header>
+
+      <label class="field-label" for="prompt">Describe what you want</label>
+      <textarea id="prompt" rows="3"
+        placeholder="e.g. a glowing purple crystal floating in space"></textarea>
+
+      <div class="chips" id="examples"></div>
+
+      <button id="generate" class="btn btn-primary">
+        <span>Generate scene</span>
+      </button>
+
+      <div id="understood" class="understood" hidden></div>
+
+      <div class="divider"></div>
+
+      <div class="row-between">
+        <label class="field-label" for="json">Scene JSON</label>
+        <button id="apply-json" class="btn btn-ghost btn-sm">Apply edits</button>
+      </div>
+      <textarea id="json" class="json" spellcheck="false" rows="12"></textarea>
+
+      <div class="divider"></div>
+
+      <label class="checkbox">
+        <input type="checkbox" id="vendor" />
+        <span>Self-contained export (bundle Three.js, works offline)</span>
+      </label>
+
+      <button id="export" class="btn btn-accent">Export website…</button>
+
+      <div id="toast" class="toast" hidden></div>
+
+      <footer class="panel-foot">
+        <a href="#" data-ext="https://github.com/zackarman28346-sketch/https-github.com-zackarman28346-sketch-claude">Docs &amp; source ↗</a>
+      </footer>
+    </aside>
+
+    <!-- Right: live preview -->
+    <main id="stage">
+      <div id="preview"></div>
+      <div id="preview-hint" class="preview-hint">drag to orbit · scroll to zoom</div>
+    </main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

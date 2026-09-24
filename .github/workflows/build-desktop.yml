@@ -1,0 +1,62 @@
+name: Build desktop app
+
+# Produces the installable Lumen3D Studio binaries.
+# Run it from the Actions tab (workflow_dispatch) or by pushing a v* tag.
+# The Windows .exe (installer + portable) is uploaded as a build artifact.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer + portable exe
+        run: npm run dist:win
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumen3d-studio-windows
+          path: |
+            release/*.exe
+          if-no-files-found: error
+
+  # Optional extra targets — comment out if you only need Windows.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run dist:mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lumen3d-studio-macos
+          path: release/*.dmg
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run dist:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lumen3d-studio-linux
+          path: release/*.AppImage
+          if-no-files-found: error

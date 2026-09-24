@@ -1,14 +1,20 @@
 {
   "name": "lumen3d",
   "version": "0.1.0",
-  "description": "Build interactive 3D websites from a simple JSON config. Zero dependencies, powered by Three.js.",
+  "description": "Build interactive 3D websites from a text prompt or JSON config. CLI + desktop app, powered by Three.js.",
   "type": "module",
+  "main": "app/main.js",
   "bin": {
     "lumen": "bin/cli.js"
   },
   "scripts": {
     "start": "node bin/cli.js",
-    "example": "node bin/cli.js dev --config examples/showcase.json"
+    "example": "node bin/cli.js dev --config examples/showcase.json",
+    "app": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
   },
   "keywords": [
     "3d",
@@ -18,7 +24,9 @@
     "static-site-generator",
     "3d-website",
     "scene",
-    "no-code"
+    "no-code",
+    "electron",
+    "desktop"
   ],
   "author": "",
   "license": "MIT",
@@ -28,6 +36,7 @@
   "files": [
     "bin",
     "src",
+    "app",
     "examples",
     "README.md",
     "LICENSE"
@@ -36,12 +45,47 @@
     "type": "git",
     "url": "https://github.com/zackarman28346-sketch/https-github.com-zackarman28346-sketch-claude.git"
   },
-  "peerDependencies": {
-    "three": ">=0.160.0"
+  "dependencies": {
+    "three": "^0.169.0"
   },
-  "peerDependenciesMeta": {
-    "three": {
-      "optional": true
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.lumen3d.studio",
+    "productName": "Lumen3D Studio",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "app/**/*",
+      "src/**/*",
+      "node_modules/three/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Lumen3D-Studio-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Lumen3D-Studio-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
     }
   }
 }

@@ -26,6 +26,50 @@ lumen build    # output a deployable site to ./dist
 
 That's the whole workflow. Drag to orbit, scroll to zoom — it's a real 3D scene.
 
+Prefer a window over a terminal? There's a desktop app too. 👇
+
+---
+
+## 🖥️ Desktop app — Lumen3D Studio
+
+A cross-platform Electron app: **type a description, watch the 3D scene appear**,
+tweak the JSON live, and export a deployable website with one click. No CLI, no
+JSON knowledge required to start.
+
+- **Prompt box** — "a glowing purple crystal floating in space" → an actual
+  scene. The parser understands shapes, colors, materials (glass / metal /
+  neon / wireframe), counts ("five cubes"), motion (spin / float / orbit), and
+  mood ("space", "cyberpunk", "underwater", "minimal white studio").
+- **Live preview** — the scene renders as you type; regenerating disposes the
+  old scene cleanly.
+- **Editable JSON** — full control when you want it; "Apply edits" re-renders.
+- **Export** — writes a static site (CDN or fully self-contained) to any folder.
+
+### Run it from source
+
+```bash
+npm install          # pulls electron + three
+npm run app          # launches Lumen3D Studio
+```
+
+### Get a Windows `.exe` (installer + portable)
+
+```bash
+npm install
+npm run dist:win     # → release/Lumen3D-Studio-Setup-*.exe  (and a portable .exe)
+```
+
+`npm run dist:mac` and `npm run dist:linux` build a `.dmg` / `.AppImage`
+respectively. Building a Windows `.exe` must happen **on Windows** (or in CI).
+
+### Or let CI build the `.exe` for you
+
+This repo ships [`.github/workflows/build-desktop.yml`](./.github/workflows/build-desktop.yml).
+Open the **Actions** tab → **Build desktop app** → **Run workflow**, or push a
+`v*` tag. It builds on Windows, macOS, and Linux runners and uploads the
+installers as downloadable artifacts — so you get a real `.exe` without owning a
+Windows machine.
+
 ---
 
 ## Why
@@ -339,11 +383,16 @@ plus your JSON.
 
 ```
 bin/cli.js            CLI entry (init / dev / build)
+src/generate.js       text prompt → scene config (offline, no API)
 src/schema.js         config normalization + defaults
 src/builder.js        config → static site (+ optional vendoring)
 src/server.js         zero-dep dev server
 src/templates/        HTML shell
-src/runtime/engine.js browser-side Three.js engine
+src/runtime/engine.js browser-side Three.js engine (mount / boot)
+app/main.js           Electron main process (window + export)
+app/preload.cjs       context-isolated IPC bridge
+app/renderer/         Studio UI (prompt box, preview, JSON editor)
+.github/workflows/    CI that builds the desktop installers
 examples/             sample configs
 ```
 

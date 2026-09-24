@@ -157,13 +157,20 @@ function animate(mesh, anim, t, base) {
   }
 }
 
-export async function boot(configUrl = './config.json') {
-  const cfg = await fetch(configUrl).then((r) => r.json());
+function sizeOf(container) {
+  const w = container.clientWidth || window.innerWidth;
+  const h = container.clientHeight || window.innerHeight;
+  return { w, h };
+}
 
-  const container = document.getElementById('lumen-root') || document.body;
+// Build a live Three.js scene from an already-normalized config object into
+// `container`. Returns a handle with dispose() so the scene can be torn down
+// and replaced (used by the live preview in the desktop app).
+export async function mount(cfg, container = document.body) {
+  let { w, h } = sizeOf(container);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(w, h);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = cfg.scene.exposure;
   if (cfg.scene.shadows) {
@@ -199,7 +206,7 @@ export async function boot(configUrl = './config.json') {
   // Camera
   const camera = new THREE.PerspectiveCamera(
     cfg.camera.fov,
-    window.innerWidth / window.innerHeight,
+    w / h,
     cfg.camera.near,
     cfg.camera.far
   );
@@ -294,7 +301,7 @@ export async function boot(configUrl = './config.json') {
     composer.addPass(new RenderPass(scene, camera));
     const b = cfg.effects.bloom;
     composer.addPass(new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      new THREE.Vector2(w, h),
       b.strength,
       b.radius,
       b.threshold
@@ -302,22 +309,27 @@ export async function boot(configUrl = './config.json') {
   }
 
   // Overlay
-  if (cfg.overlay) renderOverlay(cfg.overlay, container);
+  let overlayEl = null;
+  if (cfg.overlay) overlayEl = renderOverlay(cfg.overlay, container);
 
-  // Resize
+  // Resize — track the container's box, not just the window.
   function onResize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const s = sizeOf(container);
+    w = s.w; h = s.h;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     if (composer) composer.setSize(w, h);
   }
   window.addEventListener('resize', onResize);
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
+  if (ro) ro.observe(container);
 
   // Render loop
+  let running = true;
   const clock = new THREE.Clock();
   function tick() {
+    if (!running) return;
     const t = clock.getElapsedTime();
     for (const a of animated) animate(a.mesh, a.anim, t, a.base);
     controls.update();
@@ -327,7 +339,26 @@ export async function boot(configUrl = './config.json') {
   }
   tick();
 
-  return { scene, camera, renderer, controls };
+  function dispose() {
+    running = false;
+    window.removeEventListener('resize', onResize);
+    if (ro) ro.disconnect();
+    if (overlayEl) overlayEl.remove();
+    renderer.dispose();
+    if (renderer.domElement.parentNode) {
+      renderer.domElement.parentNode.removeChild(renderer.domElement);
+    }
+  }
+
+  return { scene, camera, renderer, controls, dispose };
+}
+
+// Load a normalized config.json from a URL and mount it full-window.
+// Used by the generated static site.
+export async function boot(configUrl = './config.json') {
+  const cfg = await fetch(configUrl).then((r) => r.json());
+  const container = document.getElementById('lumen-root') || document.body;
+  return mount(cfg, container);
 }
 
 function captureBase(obj) {
@@ -354,6 +385,7 @@ function renderOverlay(ov, container) {
   }
   el.innerHTML = parts.join('');
   container.appendChild(el);
+  return el;
 }
 
 function escapeHtml(s) {
