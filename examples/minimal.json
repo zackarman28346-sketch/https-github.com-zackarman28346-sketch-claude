@@ -1,0 +1,15 @@
+{
+  "title": "Minimal",
+  "scene": {
+    "background": "#0b0d1a"
+  },
+  "objects": [
+    {
+      "type": "box",
+      "size": [2, 2, 2],
+      "position": [0, 1, 0],
+      "material": { "color": "#ff8a5c", "roughness": 0.3, "metalness": 0.1 },
+      "animation": { "type": "spin", "axis": "y", "speed": 0.6 }
+    }
+  ]
+}

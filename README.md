@@ -1,0 +1,360 @@
+# ✦ Lumen3D
+
+**Build interactive 3D websites from a single JSON file.** No build step, no
+framework lock-in, zero npm dependencies. You describe a scene — objects,
+materials, lights, camera, animations — and Lumen3D generates a deployable
+static site powered by [Three.js](https://threejs.org).
+
+```jsonc
+{
+  "title": "My 3D Site",
+  "objects": [
+    {
+      "type": "icosahedron",
+      "radius": 1.4,
+      "material": { "type": "physical", "color": "#8a7dff", "clearcoat": 1 },
+      "animation": { "type": "float", "speed": 1.1 }
+    }
+  ]
+}
+```
+
+```bash
+lumen dev      # preview at http://localhost:5173
+lumen build    # output a deployable site to ./dist
+```
+
+That's the whole workflow. Drag to orbit, scroll to zoom — it's a real 3D scene.
+
+---
+
+## Why
+
+Spinning up a 3D website usually means wiring a bundler, learning the Three.js
+API, and writing render loops before you can put a single glowing shape on the
+screen. Lumen3D collapses that into a declarative config: the common 90% (PBR
+materials, orbit controls, shadows, bloom, an HTML overlay) is done for you, and
+the config is plain JSON so it's trivial to generate, template, or edit by hand.
+
+- **Zero dependencies** to run the CLI (Node's standard library only).
+- **CDN or self-contained.** Ship a tiny site that pulls Three.js from a CDN, or
+  `--vendor` to bundle Three.js locally so the site works fully offline.
+- **Deploy anywhere.** The output is static `index.html` + `engine.js` +
+  `config.json`. Drop it on GitHub Pages, Netlify, Vercel, S3, whatever.
+
+---
+
+## Install
+
+Requires **Node.js 18+**.
+
+```bash
+# clone this repo, then from the repo root:
+npm link          # makes the `lumen` command available globally
+# — or run without installing —
+node bin/cli.js <command>
+```
+
+> Once published to npm you'd `npm install -g lumen3d`. For now, `npm link` or
+> the direct `node bin/cli.js` invocation works out of the box.
+
+---
+
+## Quick start
+
+```bash
+lumen init my-site        # scaffold a starter lumen.config.json
+cd my-site
+lumen dev                 # live preview, reloads when you edit the config
+```
+
+Edit `lumen.config.json`, refresh the browser, watch it change. When you're
+happy:
+
+```bash
+lumen build               # → ./dist  (loads Three.js from CDN)
+lumen build --vendor      # → ./dist  (self-contained, needs: npm install three)
+```
+
+Try the bundled demo without scaffolding anything:
+
+```bash
+node bin/cli.js dev --config examples/showcase.json
+```
+
+---
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `lumen init [dir]` | Write a starter `lumen.config.json` into `dir` (default: current folder). |
+| `lumen dev [--config f] [--port n]` | Serve a live preview. Rebuilds on each request; edits to the config show on refresh. Default port `5173`. |
+| `lumen build [--config f] [--out dir] [--vendor]` | Generate a static site. Default config `lumen.config.json`, default output `dist`. |
+
+**`--vendor`** copies Three.js out of your project's `node_modules` into
+`dist/vendor/` and rewrites the page to load it locally. Run
+`npm install three` first. Without `--vendor`, the page loads Three.js from
+`cdn.jsdelivr.net` via an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
+
+---
+
+## Config reference
+
+Every field is optional and has a sensible default — a config of `{}` renders a
+valid (if empty) scene. See [`examples/`](./examples) for complete files:
+[`minimal.json`](./examples/minimal.json),
+[`starter.json`](./examples/starter.json),
+[`showcase.json`](./examples/showcase.json).
+
+### Top level
+
+```jsonc
+{
+  "title": "My 3D Site",           // <title> + og:title
+  "description": "…",              // meta description
+  "threeVersion": "0.169.0",       // CDN version of three.js (CDN mode only)
+  "scene":   { … },
+  "camera":  { … },
+  "controls":{ … },
+  "lights":  [ … ],
+  "ground":  { … },
+  "objects": [ … ],
+  "effects": { … },
+  "overlay": { … }
+}
+```
+
+### `scene`
+
+```jsonc
+"scene": {
+  // solid color …
+  "background": "#0b0d1a",
+  // … or a vertical gradient
+  "background": { "type": "gradient", "top": "#1b2350", "bottom": "#05060d" },
+
+  "fog": { "color": "#05060d", "near": 12, "far": 55 },   // or {"type":"exp2","density":0.02}
+  "shadows": true,        // enable shadow maps
+  "environment": true,    // image-based lighting for realistic PBR reflections
+  "exposure": 1.0         // tone-mapping exposure
+}
+```
+
+### `camera` & `controls`
+
+```jsonc
+"camera": {
+  "fov": 50,
+  "position": [6, 4, 8],
+  "lookAt": [0, 0, 0]
+},
+"controls": {
+  "autoRotate": true,
+  "autoRotateSpeed": 0.6,
+  "enableZoom": true,
+  "enablePan": false,
+  "minDistance": 4,
+  "maxDistance": 16,
+  "maxPolarAngle": 1.5    // clamp how far under the floor you can orbit
+}
+```
+
+### `lights`
+
+An array. Types: `ambient`, `hemisphere`, `directional`, `point`, `spot`.
+
+```jsonc
+"lights": [
+  { "type": "hemisphere", "skyColor": "#bcd4ff", "groundColor": "#2a2f4a", "intensity": 0.6 },
+  { "type": "directional", "color": "#ffffff", "intensity": 2.4, "position": [6, 10, 5], "castShadow": true },
+  { "type": "point", "color": "#8a7dff", "intensity": 30, "position": [-4, 3, -3] }
+]
+```
+
+If you omit `lights`, a reasonable hemisphere + key-light rig is used.
+
+### `objects`
+
+The heart of the scene. Each object:
+
+```jsonc
+{
+  "id": "hero",
+  "type": "icosahedron",          // see table below
+  "radius": 1.4, "detail": 1,     // geometry params depend on type
+  "position": [0, 1.4, 0],
+  "rotation": [0, 0, 0],          // radians
+  "scale": [1, 1, 1],
+  "castShadow": true,
+  "receiveShadow": false,
+  "material": { … },
+  "animation": { … }
+}
+```
+
+**Geometry types & their params**
+
+| `type` | params |
+| --- | --- |
+| `box` | `size: [x,y,z]` |
+| `sphere` | `radius`, `segments` |
+| `plane` | `size: [w,h]` |
+| `cylinder` | `radius`, `height`, `segments` |
+| `cone` | `radius`, `height`, `segments` |
+| `torus` | `radius`, `tube`, `segments` |
+| `torusKnot` | `radius`, `tube`, `segments` |
+| `icosahedron` | `radius`, `detail` |
+| `dodecahedron` | `radius`, `detail` |
+| `model` | `src` — URL to a `.glb`/`.gltf` file |
+
+**`material`**
+
+```jsonc
+"material": {
+  "type": "standard",       // standard | physical | basic | normal
+  "color": "#8a7dff",
+  "metalness": 0.4,
+  "roughness": 0.15,
+  "emissive": "#2a2050",    // glow color …
+  "emissiveIntensity": 0.4, // … pairs beautifully with effects.bloom
+  "wireframe": false,
+  "opacity": 1,
+  "transparent": false,
+  // physical-only:
+  "clearcoat": 1,
+  "transmission": 0.9,      // glass
+  "ior": 1.4
+}
+```
+
+**`animation`**
+
+| `type` | behavior | params |
+| --- | --- | --- |
+| `spin` / `rotate` | constant rotation | `axis` (`x`/`y`/`z`), `speed` |
+| `float` | bob up and down + slow spin | `speed`, `amplitude` |
+| `orbit` | circle around its start point | `speed`, `radius`, `height` |
+
+### `ground`
+
+```jsonc
+"ground": {
+  "enabled": true,
+  "size": 60,
+  "color": "#0e1024",
+  "receiveShadow": true,
+  "grid": { "divisions": 48, "color1": "#2a3155", "color2": "#161a30" }  // or false
+}
+```
+
+Set `"ground": false` to remove it entirely.
+
+### `effects`
+
+```jsonc
+"effects": {
+  "bloom": { "strength": 0.6, "radius": 0.4, "threshold": 0.85 }   // or omit for none
+}
+```
+
+Bloom makes emissive materials and bright highlights glow. Pair it with high
+`emissiveIntensity` on a material for neon-style objects.
+
+### `overlay`
+
+An optional HTML UI layer rendered over the canvas (hero text + call-to-action
+buttons):
+
+```jsonc
+"overlay": {
+  "subtitle": "Made with Lumen3D",
+  "title": "Hello, 3D web.",
+  "description": "Drag to orbit, scroll to zoom.",
+  "position": "bottom-left",     // bottom-left | top-left | bottom-center | center
+  "theme": "light",              // light | dark (text color)
+  "accent": "#8a7dff",
+  "links": [
+    { "label": "Get started", "url": "#" },
+    { "label": "GitHub", "url": "https://github.com/…" }
+  ]
+}
+```
+
+All overlay text is HTML-escaped before injection.
+
+---
+
+## Loading a 3D model
+
+Point an object at a hosted `.glb`/`.gltf`:
+
+```jsonc
+{
+  "type": "model",
+  "src": "https://example.com/robot.glb",
+  "position": [0, 0, 0],
+  "scale": [1, 1, 1],
+  "animation": { "type": "float", "speed": 0.8 }
+}
+```
+
+Models honor `castShadow` / `receiveShadow` and animations just like primitives.
+
+---
+
+## Deploying
+
+`lumen build` produces a plain static folder:
+
+```
+dist/
+  index.html
+  engine.js
+  config.json
+  vendor/        (only with --vendor)
+```
+
+Serve it from any static host. For GitHub Pages, push `dist/` to a `gh-pages`
+branch or point Pages at a `/docs` folder. Nothing server-side is required.
+
+---
+
+## How it works
+
+1. The CLI reads your config and runs it through `src/schema.js`, which fills in
+   every default so the browser engine never has to guard for missing fields.
+2. `src/builder.js` renders `src/templates/index.html` (title, meta, import map)
+   and writes the normalized config out as `config.json`.
+3. In the browser, `src/runtime/engine.js` fetches `config.json` and constructs
+   the Three.js scene: geometries, materials, lights, ground, post-processing,
+   the overlay, a resize handler, and the render loop.
+
+The config is the single source of truth. The generated site is just the engine
+plus your JSON.
+
+---
+
+## Project layout
+
+```
+bin/cli.js            CLI entry (init / dev / build)
+src/schema.js         config normalization + defaults
+src/builder.js        config → static site (+ optional vendoring)
+src/server.js         zero-dep dev server
+src/templates/        HTML shell
+src/runtime/engine.js browser-side Three.js engine
+examples/             sample configs
+```
+
+---
+
+## Contributing
+
+Issues and PRs welcome. Ideas that fit the spirit of the project: more geometry
+types, particle systems, scroll-driven camera paths, a small visual editor that
+writes the JSON.
+
+## License
+
+[MIT](./LICENSE)

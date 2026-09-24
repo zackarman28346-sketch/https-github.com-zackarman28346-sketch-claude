@@ -1,0 +1,47 @@
+{
+  "name": "lumen3d",
+  "version": "0.1.0",
+  "description": "Build interactive 3D websites from a simple JSON config. Zero dependencies, powered by Three.js.",
+  "type": "module",
+  "bin": {
+    "lumen": "bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "example": "node bin/cli.js dev --config examples/showcase.json"
+  },
+  "keywords": [
+    "3d",
+    "threejs",
+    "webgl",
+    "website-builder",
+    "static-site-generator",
+    "3d-website",
+    "scene",
+    "no-code"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zackarman28346-sketch/https-github.com-zackarman28346-sketch-claude.git"
+  },
+  "peerDependencies": {
+    "three": ">=0.160.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  }
+}

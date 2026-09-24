@@ -1,0 +1,75 @@
+{
+  "title": "My 3D Site",
+  "description": "An interactive 3D website built with Lumen3D.",
+  "scene": {
+    "background": { "type": "gradient", "top": "#1b2350", "bottom": "#05060d" },
+    "fog": { "color": "#05060d", "near": 12, "far": 55 },
+    "shadows": true,
+    "environment": true
+  },
+  "camera": {
+    "fov": 50,
+    "position": [5, 3.5, 8],
+    "lookAt": [0, 0.6, 0]
+  },
+  "controls": {
+    "autoRotate": true,
+    "autoRotateSpeed": 0.6,
+    "enablePan": false,
+    "minDistance": 4,
+    "maxDistance": 16
+  },
+  "lights": [
+    { "type": "hemisphere", "skyColor": "#bcd4ff", "groundColor": "#2a2f4a", "intensity": 0.6 },
+    { "type": "directional", "color": "#ffffff", "intensity": 2.4, "position": [6, 10, 5], "castShadow": true },
+    { "type": "point", "color": "#8a7dff", "intensity": 30, "position": [-4, 3, -3] }
+  ],
+  "ground": {
+    "enabled": true,
+    "color": "#0e1024",
+    "grid": { "divisions": 48, "color1": "#2a3155", "color2": "#161a30" }
+  },
+  "objects": [
+    {
+      "id": "hero",
+      "type": "icosahedron",
+      "radius": 1.4,
+      "detail": 1,
+      "position": [0, 1.4, 0],
+      "material": {
+        "type": "physical",
+        "color": "#8a7dff",
+        "metalness": 0.4,
+        "roughness": 0.15,
+        "clearcoat": 1,
+        "emissive": "#2a2050",
+        "emissiveIntensity": 0.4
+      },
+      "animation": { "type": "float", "speed": 1.1, "amplitude": 0.35 }
+    },
+    {
+      "id": "ring",
+      "type": "torus",
+      "radius": 2.6,
+      "tube": 0.06,
+      "position": [0, 1.4, 0],
+      "rotation": [1.4, 0, 0],
+      "material": { "type": "standard", "color": "#4de1c1", "metalness": 0.6, "roughness": 0.3, "emissive": "#0a3a30", "emissiveIntensity": 0.6 },
+      "animation": { "type": "rotate", "axis": "z", "speed": 0.5 }
+    }
+  ],
+  "effects": {
+    "bloom": { "strength": 0.55, "radius": 0.5, "threshold": 0.8 }
+  },
+  "overlay": {
+    "subtitle": "Made with Lumen3D",
+    "title": "Hello, 3D web.",
+    "description": "Edit lumen.config.json to shape this scene. Drag to orbit, scroll to zoom.",
+    "position": "bottom-left",
+    "accent": "#8a7dff",
+    "links": [
+      { "label": "Get started", "url": "#" },
+      { "label": "GitHub", "url": "https://github.com/zackarman28346-sketch/https-github.com-zackarman28346-sketch-claude" }
+    ]
+  }
+}
