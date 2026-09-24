@@ -41,6 +41,10 @@ function buildGeometry(o) {
       return new THREE.TorusGeometry(o.radius, o.tube, 24, o.segments);
     case 'torusKnot':
       return new THREE.TorusKnotGeometry(o.radius, o.tube, Math.max(64, o.segments * 2), 16);
+    case 'ring':
+      return new THREE.RingGeometry(Math.max(0.01, o.radius - o.tube), o.radius, o.segments);
+    case 'capsule':
+      return new THREE.CapsuleGeometry(o.radius, o.height, 12, o.segments);
     case 'icosahedron':
       return new THREE.IcosahedronGeometry(o.radius, o.detail);
     case 'dodecahedron':
@@ -90,6 +94,27 @@ function buildMaterial(m) {
         emissiveIntensity: m.emissiveIntensity
       });
   }
+}
+
+function buildParticles(p) {
+  const positions = new Float32Array(p.count * 3);
+  const half = p.spread / 2;
+  for (let i = 0; i < p.count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * p.spread;
+    positions[i * 3 + 1] = Math.random() * half + 1; // keep them above the floor
+    positions[i * 3 + 2] = (Math.random() - 0.5) * p.spread;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: new THREE.Color(p.color),
+    size: p.size,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false
+  });
+  return new THREE.Points(geo, mat);
 }
 
 function buildLight(l) {
@@ -168,7 +193,7 @@ function sizeOf(container) {
 // and replaced (used by the live preview in the desktop app).
 export async function mount(cfg, container = document.body) {
   let { w, h } = sizeOf(container);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(w, h);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -195,6 +220,13 @@ export async function mount(cfg, container = document.body) {
     scene.fog = cfg.scene.fog.type === 'exp2'
       ? new THREE.FogExp2(cfg.scene.fog.color, cfg.scene.fog.density)
       : new THREE.Fog(cfg.scene.fog.color, cfg.scene.fog.near, cfg.scene.fog.far);
+  }
+
+  // Particles (starfield)
+  let particles = null;
+  if (cfg.scene.particles) {
+    particles = buildParticles(cfg.scene.particles);
+    scene.add(particles);
   }
 
   // Environment (image-based lighting for PBR reflections)
@@ -332,6 +364,7 @@ export async function mount(cfg, container = document.body) {
     if (!running) return;
     const t = clock.getElapsedTime();
     for (const a of animated) animate(a.mesh, a.anim, t, a.base);
+    if (particles) particles.rotation.y = t * 0.02;
     controls.update();
     if (composer) composer.render();
     else renderer.render(scene, camera);

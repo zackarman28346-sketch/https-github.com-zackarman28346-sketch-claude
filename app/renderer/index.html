@@ -33,11 +33,44 @@
 
       <div class="chips" id="examples"></div>
 
-      <button id="generate" class="btn btn-primary">
-        <span>Generate scene</span>
-      </button>
+      <div class="btn-row">
+        <button id="generate" class="btn btn-primary">Generate scene</button>
+        <button id="randomize" class="btn btn-ghost" title="Surprise me">🎲</button>
+      </div>
 
       <div id="understood" class="understood" hidden></div>
+
+      <div class="divider"></div>
+
+      <details id="controls-wrap" class="controls" open>
+        <summary>Quick controls</summary>
+        <div class="ctl-grid">
+          <label class="ctl">Accent
+            <input type="color" id="c-accent" value="#8a7dff" />
+          </label>
+          <label class="ctl">Sky
+            <input type="color" id="c-top" value="#1b2350" />
+          </label>
+          <label class="ctl">Ground fade
+            <input type="color" id="c-bottom" value="#05060d" />
+          </label>
+          <label class="ctl ctl-check">
+            <input type="checkbox" id="c-ground" checked /> Floor
+          </label>
+          <label class="ctl ctl-check">
+            <input type="checkbox" id="c-bloom" checked /> Glow (bloom)
+          </label>
+          <label class="ctl ctl-check">
+            <input type="checkbox" id="c-stars" /> Starfield
+          </label>
+          <label class="ctl ctl-wide">Bloom strength
+            <input type="range" id="c-bloom-str" min="0" max="2" step="0.05" value="0.6" />
+          </label>
+          <label class="ctl ctl-wide">Auto-rotate speed
+            <input type="range" id="c-spin" min="0" max="4" step="0.1" value="0.5" />
+          </label>
+        </div>
+      </details>
 
       <div class="divider"></div>
 
@@ -54,7 +87,10 @@
         <span>Self-contained export (bundle Three.js, works offline)</span>
       </label>
 
-      <button id="export" class="btn btn-accent">Export website…</button>
+      <div class="btn-row">
+        <button id="export" class="btn btn-accent">Export website…</button>
+        <button id="save-png" class="btn btn-ghost" title="Save a snapshot">📸 PNG</button>
+      </div>
 
       <div id="toast" class="toast" hidden></div>
 

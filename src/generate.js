@@ -24,7 +24,9 @@ const SHAPES = {
   knot: 'torusKnot', pretzel: 'torusKnot',
   cylinder: 'cylinder', tube: 'cylinder', pillar: 'cylinder', column: 'cylinder', pipe: 'cylinder', can: 'cylinder',
   cone: 'cone', pyramid: 'cone', spike: 'cone', tree: 'cone',
-  crystal: 'icosahedron', gem: 'icosahedron', diamond: 'dodecahedron', rock: 'dodecahedron', asteroid: 'icosahedron', star: 'icosahedron'
+  crystal: 'icosahedron', gem: 'icosahedron', diamond: 'dodecahedron', rock: 'dodecahedron', asteroid: 'icosahedron', star: 'icosahedron',
+  halo: 'ring', disc: 'ring', disk: 'ring',
+  capsule: 'capsule', pill: 'capsule'
 };
 
 const NUM_WORDS = {
@@ -67,13 +69,19 @@ function detectShapes(text) {
 }
 
 function moodPalette(text) {
-  if (has(text, 'space', 'galaxy', 'cosmic', 'nebula', 'universe', 'stars?')) {
-    return { top: '#241a55', bottom: '#03040a', accent: '#8a7dff', bloom: true, dark: true };
+  if (has(text, 'space', 'galaxy', 'cosmic', 'nebula', 'universe', 'stars?', 'starfield')) {
+    return { top: '#241a55', bottom: '#03040a', accent: '#8a7dff', bloom: true, dark: true, stars: true };
   }
   if (has(text, 'cyberpunk', 'neon', 'synthwave', 'retrowave', 'vaporwave')) {
     return { top: '#2a0a3a', bottom: '#060010', accent: '#ff4df0', bloom: true, dark: true };
   }
-  if (has(text, 'sunset', 'dusk', 'warm', 'desert')) {
+  if (has(text, 'lava', 'volcano', 'volcanic', 'inferno', 'fire', 'ember')) {
+    return { top: '#3a1108', bottom: '#0a0302', accent: '#ff5c2a', bloom: true, dark: true };
+  }
+  if (has(text, 'gold', 'luxury', 'royal', 'premium', 'elegant')) {
+    return { top: '#241d0a', bottom: '#0a0803', accent: '#ffd166', bloom: true, dark: true };
+  }
+  if (has(text, 'sunset', 'dusk', 'warm', 'desert', 'sunrise')) {
     return { top: '#3a1e2a', bottom: '#0a0505', accent: '#ff8a3d', bloom: true, dark: true };
   }
   if (has(text, 'ocean', 'underwater', 'sea', 'aqua', 'deep')) {
@@ -82,11 +90,30 @@ function moodPalette(text) {
   if (has(text, 'forest', 'nature', 'jungle')) {
     return { top: '#14301f', bottom: '#040a06', accent: '#4de07a', bloom: false, dark: true };
   }
+  if (has(text, 'candy', 'pastel', 'kawaii', 'cute', 'soft')) {
+    return { top: '#f3e0f5', bottom: '#d8c4e6', accent: '#ff6ec7', bloom: false, dark: false };
+  }
   if (has(text, 'clean', 'minimal', 'light', 'white', 'bright', 'studio')) {
     return { top: '#e8ecf5', bottom: '#c4cbdb', accent: '#5a4dff', bloom: false, dark: false };
   }
   // default: deep indigo night
   return { top: '#1b2350', bottom: '#05060d', accent: '#8a7dff', bloom: true, dark: true };
+}
+
+const RAINBOW = ['#ff4d4d', '#ff8a3d', '#ffd166', '#4de07a', '#3ee6e6', '#4d7cff', '#8a4dff', '#ff6ec7'];
+
+function detectScale(text) {
+  if (has(text, 'giant', 'huge', 'massive', 'enormous', 'colossal', 'big')) return 1.8;
+  if (has(text, 'large')) return 1.35;
+  if (has(text, 'tiny', 'mini', 'small', 'little')) return 0.6;
+  return 1;
+}
+
+// A horizontal shift for the whole cluster based on positional words.
+function detectShift(text) {
+  if (has(text, 'on the left', 'to the left', 'left side')) return -3.5;
+  if (has(text, 'on the right', 'to the right', 'right side')) return 3.5;
+  return 0;
 }
 
 function detectMaterial(text, colors, mood) {
@@ -155,8 +182,12 @@ function titleFrom(desc) {
 export function generateConfig(description, opts = {}) {
   const text = String(description || '').toLowerCase();
   const mood = moodPalette(text);
-  const colors = pickColors(text);
+  let colors = pickColors(text);
   const anim = detectAnimation(text);
+  const scaleF = detectScale(text);
+  const shift = detectShift(text);
+  const rainbow = has(text, 'rainbow', 'colorful', 'multicolor', 'multicolored', 'assorted');
+  if (rainbow) colors = RAINBOW.slice();
 
   // Which shapes were asked for?
   let shapeReqs = detectShapes(text);
@@ -183,11 +214,14 @@ export function generateConfig(description, opts = {}) {
     }
     const geom = shapeGeometryParams(shape);
     const spacing = shapes.length > 6 ? 2.4 : 3.0;
+    const pos = layout(i, shapes.length, spacing, 1.2);
+    pos[0] += shift;
     return {
       id: `${shape}-${i}`,
       type: shape,
       ...geom,
-      position: layout(i, shapes.length, spacing, 1.2),
+      position: pos,
+      scale: scaleF !== 1 ? [scaleF, scaleF, scaleF] : [1, 1, 1],
       material,
       animation: anim
         ? (anim.type === 'orbit'
@@ -206,6 +240,7 @@ export function generateConfig(description, opts = {}) {
     scene: {
       background: { type: 'gradient', top: mood.top, bottom: mood.bottom },
       fog: mood.dark ? { color: mood.bottom, near: 14, far: 65 } : null,
+      particles: mood.stars ? { count: 1400, color: '#cfd6ff', size: 0.06, spread: 60 } : null,
       shadows: true,
       environment: true
     },
@@ -249,12 +284,15 @@ export function generateConfig(description, opts = {}) {
 export function explain(description) {
   const text = String(description || '').toLowerCase();
   const shapes = detectShapes(text).map((s) => `${s.count}× ${s.shape}`);
-  const colors = pickColors(text);
+  const rainbow = has(text, 'rainbow', 'colorful', 'multicolor', 'multicolored', 'assorted');
+  const colors = rainbow ? RAINBOW.slice(0, 5) : pickColors(text);
   const anim = detectAnimation(text);
+  const mood = moodPalette(text);
   return {
     shapes: shapes.length ? shapes : ['default hero'],
     colors: colors.length ? colors : ['auto'],
     motion: anim ? anim.type : 'none',
-    bloom: moodPalette(text).bloom
+    bloom: mood.bloom,
+    stars: !!mood.stars
   };
 }

@@ -2,6 +2,7 @@
 // Owns the window and the privileged operations (export to disk, open paths).
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFromObject } from '../src/builder.js';
@@ -55,6 +56,20 @@ ipcMain.handle('export-site', async (_e, { config, vendor }) => {
   } catch (err) {
     return { canceled: false, error: err.message };
   }
+});
+
+// Save a PNG snapshot of the current preview.
+ipcMain.handle('save-png', async (_e, { dataURL, name }) => {
+  const win = BrowserWindow.getFocusedWindow();
+  const res = await dialog.showSaveDialog(win, {
+    title: 'Save snapshot',
+    defaultPath: name || 'lumen-scene.png',
+    filters: [{ name: 'PNG image', extensions: ['png'] }]
+  });
+  if (res.canceled || !res.filePath) return { canceled: true };
+  const base64 = String(dataURL).replace(/^data:image\/png;base64,/, '');
+  await fs.writeFile(res.filePath, Buffer.from(base64, 'base64'));
+  return { path: res.filePath };
 });
 
 ipcMain.handle('open-path', async (_e, p) => {

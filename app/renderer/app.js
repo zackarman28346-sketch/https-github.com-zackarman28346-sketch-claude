@@ -16,10 +16,34 @@ const els = {
   applyJson: $('#apply-json'),
   vendor: $('#vendor'),
   export: $('#export'),
+  savePng: $('#save-png'),
+  randomize: $('#randomize'),
   toast: $('#toast'),
   examples: $('#examples'),
-  preview: $('#preview')
+  preview: $('#preview'),
+  // quick controls
+  cAccent: $('#c-accent'),
+  cTop: $('#c-top'),
+  cBottom: $('#c-bottom'),
+  cGround: $('#c-ground'),
+  cBloom: $('#c-bloom'),
+  cStars: $('#c-stars'),
+  cBloomStr: $('#c-bloom-str'),
+  cSpin: $('#c-spin')
 };
+
+const RANDOM_PROMPTS = [
+  'a giant glowing crystal floating in space',
+  'three chrome metal spheres orbiting',
+  'cyberpunk neon wireframe torus knot',
+  'a glass diamond spinning slowly',
+  'five golden cubes underwater',
+  'a lava red spiky cone with glow',
+  'rainbow spheres floating in a pastel studio',
+  'a tiny silver capsule in a starfield',
+  'a huge purple gem with a spinning halo',
+  'colorful cubes in a neon city'
+];
 
 const EXAMPLES = [
   'a glowing purple crystal floating in space',
@@ -49,6 +73,66 @@ async function render(cfgRaw) {
   handle = await mount(cfg, els.preview);
 }
 
+// Reflect the current scene's values into the control inputs.
+function syncControls() {
+  const n = normalizeConfig(rawConfig);
+  els.cAccent.value = n.overlay ? n.overlay.accent : '#8a7dff';
+  if (n.scene.background.type === 'gradient') {
+    els.cTop.value = n.scene.background.top;
+    els.cBottom.value = n.scene.background.bottom;
+  }
+  els.cGround.checked = n.ground.enabled;
+  els.cBloom.checked = !!n.effects.bloom;
+  els.cStars.checked = !!n.scene.particles;
+  els.cBloomStr.value = n.effects.bloom ? n.effects.bloom.strength : 0.6;
+  els.cSpin.value = n.controls.autoRotateSpeed;
+}
+
+function ensure(obj, key, fallback) {
+  if (!obj[key] || typeof obj[key] !== 'object') obj[key] = fallback;
+  return obj[key];
+}
+
+// Patch the raw config from the controls, then re-render + sync JSON.
+let patchTimer = null;
+function applyControls() {
+  if (!rawConfig) return;
+  const scene = ensure(rawConfig, 'scene', {});
+  const bg = ensure(scene, 'background', { type: 'gradient' });
+  bg.type = 'gradient';
+  bg.top = els.cTop.value;
+  bg.bottom = els.cBottom.value;
+
+  const overlay = ensure(rawConfig, 'overlay', {});
+  overlay.accent = els.cAccent.value;
+
+  const ground = ensure(rawConfig, 'ground', {});
+  ground.enabled = els.cGround.checked;
+
+  if (els.cBloom.checked) {
+    const b = ensure(ensure(rawConfig, 'effects', {}), 'bloom', {});
+    b.strength = parseFloat(els.cBloomStr.value);
+    if (b.radius == null) b.radius = 0.5;
+    if (b.threshold == null) b.threshold = 0.8;
+  } else if (rawConfig.effects) {
+    rawConfig.effects.bloom = null;
+  }
+
+  scene.particles = els.cStars.checked
+    ? (scene.particles && typeof scene.particles === 'object'
+        ? scene.particles
+        : { count: 1400, color: '#cfd6ff', size: 0.06, spread: 60 })
+    : null;
+
+  const controls = ensure(rawConfig, 'controls', {});
+  controls.autoRotateSpeed = parseFloat(els.cSpin.value);
+  controls.autoRotate = parseFloat(els.cSpin.value) > 0;
+
+  els.json.value = JSON.stringify(rawConfig, null, 2);
+  clearTimeout(patchTimer);
+  patchTimer = setTimeout(() => { render(rawConfig).catch((e) => toast('Preview error: ' + e.message, 'err')); }, 100);
+}
+
 function showUnderstood(desc) {
   const e = explain(desc);
   els.understood.hidden = false;
@@ -58,7 +142,8 @@ function showUnderstood(desc) {
   els.understood.innerHTML =
     `<b>Understood:</b> ${e.shapes.map((s) => `<span class="tag">${s}</span>`).join('')}` +
     `<br>${swatches} <span class="tag">motion: ${e.motion}</span>` +
-    (e.bloom ? ' <span class="tag">glow</span>' : '');
+    (e.bloom ? ' <span class="tag">glow</span>' : '') +
+    (e.stars ? ' <span class="tag">starfield</span>' : '');
 }
 
 async function doGenerate() {
@@ -66,6 +151,7 @@ async function doGenerate() {
   rawConfig = generateConfig(desc);
   els.json.value = JSON.stringify(rawConfig, null, 2);
   showUnderstood(desc);
+  syncControls();
   els.toast.hidden = true;
   try {
     await render(rawConfig);
@@ -87,6 +173,7 @@ async function applyJson() {
   els.toast.hidden = true;
   try {
     await render(rawConfig);
+    syncControls();
     toast('Applied JSON edits to the preview.', 'ok');
   } catch (err) {
     toast('Preview error: ' + err.message, 'err');
@@ -119,6 +206,28 @@ async function doExport() {
   }
 }
 
+function randomize() {
+  const pick = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)];
+  els.prompt.value = pick;
+  doGenerate();
+}
+
+async function savePng() {
+  if (!handle || !handle.renderer) { toast('Generate a scene first.', 'err'); return; }
+  // Render one fresh frame so the drawing buffer is current, then capture.
+  handle.renderer.render(handle.scene, handle.camera);
+  const dataURL = handle.renderer.domElement.toDataURL('image/png');
+  const name = (rawConfig && rawConfig.title ? rawConfig.title : 'lumen-scene')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.png';
+  try {
+    const res = await window.lumen.savePng({ dataURL, name });
+    if (res && res.path) toast('Saved snapshot.', 'ok', res.path);
+    else if (res && res.canceled) toast('Save canceled.', 'ok');
+  } catch (err) {
+    toast('Could not save PNG: ' + err.message, 'err');
+  }
+}
+
 // ---- wire up ----
 EXAMPLES.forEach((ex) => {
   const chip = document.createElement('button');
@@ -132,6 +241,13 @@ EXAMPLES.forEach((ex) => {
 els.generate.addEventListener('click', doGenerate);
 els.applyJson.addEventListener('click', applyJson);
 els.export.addEventListener('click', doExport);
+els.randomize.addEventListener('click', randomize);
+els.savePng.addEventListener('click', savePng);
+
+[els.cAccent, els.cTop, els.cBottom, els.cBloomStr, els.cSpin].forEach((el) =>
+  el.addEventListener('input', applyControls));
+[els.cGround, els.cBloom, els.cStars].forEach((el) =>
+  el.addEventListener('change', applyControls));
 
 els.prompt.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') doGenerate();

@@ -39,6 +39,18 @@ function normalizeBackground(bg) {
   return { type: 'color', color: str(bg.color, '#0b0d1a') };
 }
 
+function normalizeParticles(p) {
+  if (!p) return null;
+  if (p === true) p = {};
+  if (!isObject(p)) return null;
+  return {
+    count: Math.max(0, Math.min(20000, num(p.count, 1200))),
+    color: str(p.color, '#ffffff'),
+    size: num(p.size, 0.05),
+    spread: num(p.spread, 40)
+  };
+}
+
 function normalizeFog(fog) {
   if (!isObject(fog)) return null;
   if (fog.type === 'exp2') {
@@ -228,6 +240,7 @@ export function normalizeConfig(raw) {
     scene: {
       background: normalizeBackground(scene.background),
       fog: normalizeFog(scene.fog),
+      particles: normalizeParticles(scene.particles),
       environment: bool(scene.environment, true),
       shadows: bool(scene.shadows, true),
       exposure: num(scene.exposure, 1.0)
